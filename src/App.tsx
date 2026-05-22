@@ -17,6 +17,17 @@ import {
   checkBadges,
   parseLocalDate
 } from './utils';
+import { useAuth } from './AuthContext';
+import {
+  loadUserData,
+  saveHabit,
+  saveLog,
+  saveBadge,
+  saveUserSettings,
+  saveAllData,
+  clearUserData,
+} from './db';
+import LoginScreen from './LoginScreen';
 
 // Subcomponents
 import HabitCard from './components/HabitCard';
@@ -27,6 +38,8 @@ import ConfirmDialog from './components/ConfirmDialog';
 import LucideIcon from './components/LucideIcon';
 
 export default function App() {
+  const { user, loading: authLoading, signIn, signOut: handleSignOut } = useAuth();
+
   // --- STATE DECLARATIONS ---
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
@@ -101,20 +114,44 @@ export default function App() {
     setQuoteIndex(Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length));
   }, []);
 
+  // --- FIRESTORE SYNC: load cloud data when user logs in ---
+  useEffect(() => {
+    if (!user) return;
+    loadUserData(user.uid)
+      .then(({ habits: fHabits, logs: fLogs, badges: fBadges, settings: fSettings }) => {
+        if (fHabits.length > 0) {
+          setHabits(fHabits);
+          setLogs(fLogs);
+          setBadges(fBadges.length > 0 ? fBadges : DEFAULT_BADGES);
+          if (fSettings) setSettings(fSettings);
+        } else {
+          // First login — migrate localStorage data to Firestore
+          const localHabits: Habit[] = JSON.parse(localStorage.getItem('aurahabit_habits') || 'null') ?? INITIAL_HABITS;
+          const localLogs: HabitLog[] = JSON.parse(localStorage.getItem('aurahabit_logs') || '[]');
+          const localBadges: Badge[] = JSON.parse(localStorage.getItem('aurahabit_badges') || 'null') ?? DEFAULT_BADGES;
+          const localSettings: AppSettings | null = JSON.parse(localStorage.getItem('aurahabit_settings') || 'null');
+          saveAllData(user.uid, localHabits, localLogs, localBadges).catch(console.error);
+          if (localSettings) saveUserSettings(user.uid, localSettings).catch(console.error);
+        }
+      })
+      .catch(console.error);
+  }, [user]);
+
   // --- SYNC ENGINE ---
-  const saveHabits = (newHabits: Habit[]) => {
+  const saveHabits = (newHabits: Habit[], changedHabit?: Habit) => {
     setHabits(newHabits);
     localStorage.setItem('aurahabit_habits', JSON.stringify(newHabits));
+    if (user && changedHabit) saveHabit(user.uid, changedHabit).catch(console.error);
   };
 
-  const saveLogs = (newLogs: HabitLog[]) => {
+  const saveLogs = (newLogs: HabitLog[], changedLog?: HabitLog) => {
     setLogs(newLogs);
     localStorage.setItem('aurahabit_logs', JSON.stringify(newLogs));
-    
+
     // Check Badge achievements dynamically whenever a new log entry saves!
     const updatedBadges = checkBadges(habits, newLogs, badges);
     const newlyUnlocked = updatedBadges.find((b, idx) => b.unlockedAt && !badges[idx].unlockedAt);
-    
+
     if (newlyUnlocked) {
       setUnlockedBadgeToast(newlyUnlocked);
       // Auto dismiss after 4 seconds
@@ -122,14 +159,20 @@ export default function App() {
         setUnlockedBadgeToast(null);
       }, 4000);
     }
-    
+
     setBadges(updatedBadges);
     localStorage.setItem('aurahabit_badges', JSON.stringify(updatedBadges));
+
+    if (user) {
+      if (changedLog) saveLog(user.uid, changedLog).catch(console.error);
+      if (newlyUnlocked) saveBadge(user.uid, newlyUnlocked).catch(console.error);
+    }
   };
 
   const saveSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
     localStorage.setItem('aurahabit_settings', JSON.stringify(newSettings));
+    if (user) saveUserSettings(user.uid, newSettings).catch(console.error);
   };
 
 
@@ -191,17 +234,13 @@ export default function App() {
     const isNowCompleted = newValue >= targetValue;
 
     let nextLogs = [...logs];
+    let changedLog: HabitLog;
 
     if (logIndex >= 0) {
-      // Update existing record
-      nextLogs[logIndex] = {
-        ...nextLogs[logIndex],
-        value: newValue,
-        isCompleted: isNowCompleted
-      };
+      changedLog = { ...nextLogs[logIndex], value: newValue, isCompleted: isNowCompleted };
+      nextLogs[logIndex] = changedLog;
     } else {
-      // Create fresh log detail
-      const newLog: HabitLog = {
+      changedLog = {
         id: `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         habitId,
         date: selectedDate,
@@ -209,25 +248,18 @@ export default function App() {
         targetValue,
         isCompleted: isNowCompleted
       };
-      nextLogs.push(newLog);
+      nextLogs.push(changedLog);
     }
 
-    saveLogs(nextLogs);
+    saveLogs(nextLogs, changedLog);
   };
 
   const handleCreateOrUpdateHabit = (habitInput: Omit<Habit, 'id' | 'createdAt' | 'isArchived'>) => {
     if (editingHabit) {
       // Edit mode
-      const nextHabits = habits.map(h => {
-        if (h.id === editingHabit.id) {
-          return {
-            ...h,
-            ...habitInput
-          };
-        }
-        return h;
-      });
-      saveHabits(nextHabits);
+      const updated = { ...editingHabit, ...habitInput };
+      const nextHabits = habits.map(h => h.id === editingHabit.id ? updated : h);
+      saveHabits(nextHabits, updated);
       setEditingHabit(null);
     } else {
       // Create mode
@@ -237,7 +269,7 @@ export default function App() {
         createdAt: new Date().toISOString(),
         isArchived: false
       };
-      saveHabits([...habits, newHabit]);
+      saveHabits([...habits, newHabit], newHabit);
     }
   };
 
@@ -249,19 +281,16 @@ export default function App() {
 
   const handleConfirmArchive = () => {
     if (!archiveHabitId) return;
-    const nextHabits = habits.map(h => {
-      if (h.id === archiveHabitId) {
-        return { ...h, isArchived: true };
-      }
-      return h;
-    });
-    saveHabits(nextHabits);
+    const archived = habits.find(h => h.id === archiveHabitId);
+    const nextHabits = habits.map(h => h.id === archiveHabitId ? { ...h, isArchived: true } : h);
+    saveHabits(nextHabits, archived ? { ...archived, isArchived: true } : undefined);
     setArchiveHabitId(null);
   };
 
   const handleImportDatabase = (importedHabits: Habit[], importedLogs: HabitLog[]) => {
     saveHabits(importedHabits);
     saveLogs(importedLogs);
+    if (user) saveAllData(user.uid, importedHabits, importedLogs, badges).catch(console.error);
     setActiveTab('daily');
   };
 
@@ -276,11 +305,12 @@ export default function App() {
       themeColor: 'indigo',
       notificationsEnabled: false
     });
-    
+
     localStorage.setItem('aurahabit_habits', JSON.stringify(INITIAL_HABITS));
     localStorage.removeItem('aurahabit_logs');
     localStorage.setItem('aurahabit_badges', JSON.stringify(DEFAULT_BADGES));
     localStorage.removeItem('aurahabit_settings');
+    if (user) clearUserData(user.uid).catch(console.error);
     setSelectedDate(getLocalDateString(new Date()));
     setActiveTab('daily');
   };
@@ -292,6 +322,22 @@ export default function App() {
     const pDate = parseLocalDate(selectedDate);
     return pDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   }, [selectedDate]);
+
+  // Auth gate — placed after all hooks (Rules of Hooks)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg animate-pulse">
+            <LucideIcon name="Flame" size={22} />
+          </div>
+          <p className="text-xs font-bold text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <LoginScreen onSignIn={signIn} />;
 
   return (
     <div className={`min-h-screen bg-slate-50 dark:bg-gray-950 text-gray-900 pb-24 md:pb-6 transition-all duration-300 dark:text-zinc-100`}>
@@ -331,14 +377,32 @@ export default function App() {
             ))}
           </nav>
 
-          <div className="flex items-center space-x-3">
-            <div className="text-right">
+          <div className="flex items-center space-x-2">
+            <div className="text-right hidden sm:block">
               <span className="text-3xs text-gray-400 block font-medium">Hello,</span>
-              <span className="text-xs font-bold text-gray-800 dark:text-gray-150 leading-tight block">{settings.userName}</span>
+              <span className="text-xs font-bold text-gray-800 dark:text-gray-150 leading-tight block">
+                {user.displayName?.split(' ')[0] ?? settings.userName}
+              </span>
             </div>
-            <div className="h-8 w-8 rounded-full bg-indigo-100 border border-indigo-300 dark:border-indigo-800 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-extrabold text-xs">
-              {settings.userName[0]?.toUpperCase() || 'A'}
-            </div>
+            {user.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt="avatar"
+                referrerPolicy="no-referrer"
+                className="h-8 w-8 rounded-full border border-indigo-300 dark:border-indigo-800 object-cover"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-indigo-100 border border-indigo-300 dark:border-indigo-800 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-extrabold text-xs">
+                {(user.displayName ?? settings.userName)[0]?.toUpperCase() || 'A'}
+              </div>
+            )}
+            <button
+              onClick={handleSignOut}
+              title="Sign out"
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-zinc-200 transition"
+            >
+              <LucideIcon name="LogOut" size={14} />
+            </button>
           </div>
         </div>
       </header>
