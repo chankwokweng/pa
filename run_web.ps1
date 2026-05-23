@@ -1,0 +1,17 @@
+# Local development script — reads Firebase config from .env.example names
+# Copy values from your Firebase project and run: .\run_web.ps1
+
+$env:FIREBASE_API_KEY = "YOUR_API_KEY_HERE"
+$env:FIREBASE_AUTH_DOMAIN = "YOUR_AUTH_DOMAIN_HERE"
+$env:FIREBASE_PROJECT_ID = "YOUR_PROJECT_ID_HERE"
+$env:FIREBASE_STORAGE_BUCKET = "YOUR_STORAGE_BUCKET_HERE"
+$env:FIREBASE_MESSAGING_SENDER_ID = "YOUR_MESSAGING_SENDER_ID_HERE"
+$env:FIREBASE_APP_ID = "YOUR_APP_ID_HERE"
+
+flutter run -d chrome `
+  --dart-define=FIREBASE_API_KEY=$env:FIREBASE_API_KEY `
+  --dart-define=FIREBASE_AUTH_DOMAIN=$env:FIREBASE_AUTH_DOMAIN `
+  --dart-define=FIREBASE_PROJECT_ID=$env:FIREBASE_PROJECT_ID `
+  --dart-define=FIREBASE_STORAGE_BUCKET=$env:FIREBASE_STORAGE_BUCKET `
+  --dart-define=FIREBASE_MESSAGING_SENDER_ID=$env:FIREBASE_MESSAGING_SENDER_ID `
+  --dart-define=FIREBASE_APP_ID=$env:FIREBASE_APP_ID
