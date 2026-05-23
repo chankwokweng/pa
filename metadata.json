@@ -1,6 +1,0 @@
-{
-  "name": "AuraHabit",
-  "description": "Premium offline-ready habit tracker PWA with interactive timers, streak charts, quantitative tracking, and data backup.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
