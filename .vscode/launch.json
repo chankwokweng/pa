@@ -1,15 +1,39 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "chrome",
-            "request": "launch",
-            "name": "Launch Chrome against localhost",
-            "url": "https://localhost:3000",
-            "webRoot": "${workspaceFolder}"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter Web (Chrome) — local debug",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": [
+        "-d", "chrome",
+        "--dart-define=FIREBASE_API_KEY=AIzaSyCNh9UQQTH_4vU_Ug6WpNJaDcabVNf3H6I",
+        "--dart-define=FIREBASE_AUTH_DOMAIN=tyto-pa.firebaseapp.com",
+        "--dart-define=FIREBASE_PROJECT_ID=tyto-pa",
+        "--dart-define=FIREBASE_STORAGE_BUCKET=tyto-pa.firebasestorage.app",
+        "--dart-define=FIREBASE_MESSAGING_SENDER_ID=896665959301",
+        "--dart-define=FIREBASE_APP_ID=1:896665959301:web:100ae3f382cf76a012e2ec",
+        "--dart-define=GOOGLE_OAUTH_CLIENT_ID=${env:GOOGLE_OAUTH_CLIENT_ID}"
+      ]
+    },
+    {
+      "name": "Flutter Web — release preview (localhost)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": [
+        "-d", "chrome",
+        "--release",
+        "--web-port", "5500",
+        "--dart-define=FIREBASE_API_KEY=AIzaSyCNh9UQQTH_4vU_Ug6WpNJaDcabVNf3H6I",
+        "--dart-define=FIREBASE_AUTH_DOMAIN=tyto-pa.firebaseapp.com",
+        "--dart-define=FIREBASE_PROJECT_ID=tyto-pa",
+        "--dart-define=FIREBASE_STORAGE_BUCKET=tyto-pa.firebasestorage.app",
+        "--dart-define=FIREBASE_MESSAGING_SENDER_ID=896665959301",
+        "--dart-define=FIREBASE_APP_ID=1:896665959301:web:100ae3f382cf76a012e2ec",
+        "--dart-define=GOOGLE_OAUTH_CLIENT_ID=${env:GOOGLE_OAUTH_CLIENT_ID}"
+      ]
+    }
+  ]
 }

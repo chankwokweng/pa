@@ -3,6 +3,8 @@ import '../models/habit.dart';
 import '../models/habit_log.dart';
 import '../models/badge_model.dart';
 import '../models/app_settings.dart';
+import '../models/todo_item.dart';
+import '../models/planner_event.dart';
 
 class FirestoreService {
   final _db = FirebaseFirestore.instance;
@@ -16,8 +18,36 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> _badgesCol(String uid) =>
       _db.collection('users').doc(uid).collection('badges');
 
+  CollectionReference<Map<String, dynamic>> _todosCol(String uid) =>
+      _db.collection('users').doc(uid).collection('todos');
+
+  CollectionReference<Map<String, dynamic>> _plannerEventsCol(String uid) =>
+      _db.collection('users').doc(uid).collection('planner_events');
+
   DocumentReference<Map<String, dynamic>> _userDoc(String uid) =>
       _db.collection('users').doc(uid);
+
+  Future<void> saveTodo(String uid, TodoItem todo) =>
+      _todosCol(uid).doc(todo.id).set(_clean(todo.toJson()));
+
+  Future<void> deleteTodo(String uid, String todoId) =>
+      _todosCol(uid).doc(todoId).delete();
+
+  Future<List<TodoItem>> loadTodos(String uid) async {
+    final snap = await _todosCol(uid).get();
+    return snap.docs.map((d) => TodoItem.fromJson(d.data())).toList();
+  }
+
+  Future<void> savePlannerEvent(String uid, PlannerEvent event) =>
+      _plannerEventsCol(uid).doc(event.id).set(_clean(event.toJson()));
+
+  Future<void> deletePlannerEvent(String uid, String eventId) =>
+      _plannerEventsCol(uid).doc(eventId).delete();
+
+  Future<List<PlannerEvent>> loadPlannerEvents(String uid) async {
+    final snap = await _plannerEventsCol(uid).get();
+    return snap.docs.map((d) => PlannerEvent.fromJson(d.data())).toList();
+  }
 
   Future<void> saveHabit(String uid, Habit habit) =>
       _habitsCol(uid).doc(habit.id).set(_clean(habit.toJson()));

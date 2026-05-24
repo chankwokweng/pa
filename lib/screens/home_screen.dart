@@ -7,6 +7,7 @@ import '../widgets/badge_toast.dart';
 import '../widgets/habit_form_sheet.dart';
 import 'daily_screen.dart';
 import 'habits_screen.dart';
+import 'planner_screen.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
 
@@ -48,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _tabs = [
     (icon: Icons.check_circle_outline, label: 'Today'),
+    (icon: Icons.calendar_month_outlined, label: 'Planner'),
     (icon: Icons.list_alt_outlined, label: 'Habits'),
     (icon: Icons.bar_chart, label: 'Stats'),
     (icon: Icons.settings_outlined, label: 'Settings'),
@@ -55,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _screens = [
     DailyScreen(),
+    PlannerScreen(),
     HabitsScreen(),
     StatsScreen(),
     SettingsScreen(),
@@ -155,10 +158,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.only(right: 4),
                 child: ClipOval(
                   child: Image.network(
-                    user.photoURL!,
+                    // Request 40px from Google CDN (matches display size, reduces load)
+                    user.photoURL!.replaceAll(RegExp(r'=s\d+-c$'), '=s40-c'),
                     width: 32,
                     height: 32,
                     fit: BoxFit.cover,
+                    cacheWidth: 64,  // 2× for HiDPI, kept in Flutter image cache
+                    cacheHeight: 64,
                     errorBuilder: (_, __, ___) => _avatarFallback(user),
                   ),
                 ),
