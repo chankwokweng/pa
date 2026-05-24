@@ -107,7 +107,7 @@ class _HabitCardState extends State<HabitCard> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isCompleted
-              ? habitColor.withOpacity(0.4)
+              ? habitColor.withValues(alpha: 0.4)
               : isDark
                   ? const Color(0xFF1F2937)
                   : const Color(0xFFE5E7EB),
@@ -115,7 +115,7 @@ class _HabitCardState extends State<HabitCard> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -131,7 +131,7 @@ class _HabitCardState extends State<HabitCard> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: habitColor.withOpacity(0.08),
+                  color: habitColor.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -150,7 +150,7 @@ class _HabitCardState extends State<HabitCard> {
                       decoration: BoxDecoration(
                         color: isCompleted
                             ? habitColor
-                            : spec.color.withOpacity(0.12),
+                            : spec.color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -186,7 +186,7 @@ class _HabitCardState extends State<HabitCard> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: spec.color.withOpacity(0.1),
+                                  color: spec.color.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(

@@ -225,7 +225,7 @@ class _HabitFormSheetState extends State<HabitFormSheet> {
                                 width: 3,
                               ),
                               boxShadow: selected
-                                  ? [BoxShadow(color: col.withOpacity(0.5), blurRadius: 8)]
+                                  ? [BoxShadow(color: col.withValues(alpha: 0.5), blurRadius: 8)]
                                   : null,
                             ),
                             child: selected
@@ -323,6 +323,7 @@ class _HabitFormSheetState extends State<HabitFormSheet> {
           maxLines: maxLines,
           keyboardType: keyboardType,
           validator: validator,
+          style: const TextStyle(fontSize: 13, color: Color(0xFF111827)),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
